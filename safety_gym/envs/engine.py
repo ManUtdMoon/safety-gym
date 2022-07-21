@@ -882,6 +882,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.reset_layout = deepcopy(self.layout)
 
         cost = self.cost()
+        self._cost = cost
         assert cost['cost'] == 0, f'World has starting cost! {cost}'
 
         # Reset stateful parts of the environment
@@ -1176,8 +1177,10 @@ class Engine(gym.Env, gym.utils.EzPickle):
         # Calculate constraint violations
         if self.constrain_hazards:
             cost['cost_hazards'] = 0
+            cost['constraint_hazards'] = []
             for h_pos in self.hazards_pos:
                 h_dist = self.dist_xy(h_pos)
+                cost['constraint_hazards'].append(self.hazards_size - h_dist)
                 if h_dist <= self.hazards_size:
                     cost['cost_hazards'] += self.hazards_cost * (self.hazards_size - h_dist)
 
@@ -1289,6 +1292,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
                             self.build_goal()
                         except ResamplingError as e:
                             # Normal end of episode
+                            info['resample_failure'] = True
                             self.done = True
                     else:
                         # Try to make a goal, which could raise a ResamplingError exception
@@ -1298,8 +1302,8 @@ class Engine(gym.Env, gym.utils.EzPickle):
 
         # Timeout
         self.steps += 1
-        if self.steps >= self.num_steps:
-            self.done = True  # Maximum number of steps in an episode reached
+        # if self.steps >= self.num_steps:
+        #     self.done = True  # Maximum number of steps in an episode reached
 
         return self.obs(), reward, self.done, info
 
